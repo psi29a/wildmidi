@@ -122,7 +122,13 @@ static void copy(struct xmi_ctx *ctx, char *b, uint32_t len)
 #define DST_CHUNK 8192
 static void resize_dst(struct xmi_ctx *ctx) {
     uint32_t pos = ctx->dst_ptr - ctx->dst;
-    ctx->dst = (uint8_t *) realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
+    uint8_t *new_dst = (uint8_t *) realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
+    if (!new_dst){
+        _WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_MEM, "Unable to reallocate memory.", 0);
+        free(ctx->dst);
+        return;
+    }
+    ctx->dst = new_dst;
     ctx->dstsize += DST_CHUNK;
     ctx->dstrem += DST_CHUNK;
     ctx->dst_ptr = ctx->dst + pos;
@@ -1077,7 +1083,6 @@ badfile:    _WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_CORUPT, "(too short)
             return (0);
         }
     }
-
     return (-1);
 }
 
@@ -1087,7 +1092,7 @@ static int ExtractTracks(struct xmi_ctx *ctx) {
     ctx->events = (midi_event **) calloc(ctx->info.tracks, sizeof(midi_event*));
     ctx->timing = (int16_t *) calloc(ctx->info.tracks, sizeof(int16_t));
     /* type-2 for multi-tracks, type-0 otherwise */
-    ctx->info.type = (ctx->info.tracks > 1)? 2 : 0;
+    ctx->info.type = (ctx->info.tracks > 1) ? 2 : 0;
 
     seeksrc(ctx, ctx->datastart);
     i = ExtractTracksFromXmi(ctx);

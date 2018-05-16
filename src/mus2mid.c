@@ -106,20 +106,6 @@ typedef struct MUSHeader {
     uint16_t instrCnt;
 } MUSHeader ;
 #define MUS_HEADERSIZE 14
-
-typedef struct MidiHeaderChunk {
-    char name[4];
-    int32_t length;
-    int16_t format; /* make 0 */
-    int16_t ntracks;/* make 1 */
-    int16_t division; /* 0xe250 ?? */
-} MidiHeaderChunk;
-#define MIDI_HEADERSIZE 14
-
-typedef struct MidiTrackChunk {
-    char name[4];
-    int32_t length;
-} MidiTrackChunk;
 #define TRK_CHUNKSIZE 8
 
 struct mus_ctx {
@@ -133,7 +119,13 @@ struct mus_ctx {
 #define DST_CHUNK 8192
 static void resize_dst(struct mus_ctx *ctx) {
     uint32_t pos = ctx->dst_ptr - ctx->dst;
-    ctx->dst = (uint8_t *) realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
+    uint8_t *new_dst = (uint8_t *) realloc(ctx->dst, ctx->dstsize + DST_CHUNK);
+    if (!new_dst){
+        _WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_MEM, "Unable to reallocate memory.", 0);
+        free(ctx->dst);
+        return;
+    }
+    ctx->dst = new_dst;
     ctx->dstsize += DST_CHUNK;
     ctx->dstrem += DST_CHUNK;
     ctx->dst_ptr = ctx->dst + pos;

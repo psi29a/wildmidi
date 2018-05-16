@@ -547,9 +547,16 @@ float _WM_GetSamplesPerTick(uint32_t divisions, uint32_t tempo) {
 
 static void _WM_CheckEventMemoryPool(struct _mdi *mdi) {
     if ((mdi->event_count + 1) >= mdi->events_size) {
+        struct _event * new_events;
         mdi->events_size += MEM_CHUNK;
-        mdi->events = (struct _event *) realloc(mdi->events,
-                              (mdi->events_size * sizeof(struct _event)));
+        new_events = (struct _event *)
+                realloc(mdi->events, (mdi->events_size * sizeof(struct _event)));
+        if (!new_events){
+            _WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_MEM, "Unable to reallocate memory.", 0);
+            free(mdi->events);
+            return;
+        }
+        mdi->events = new_events;
     }
 }
 
@@ -2144,7 +2151,13 @@ uint32_t _WM_SetupMidiEvent(struct _mdi *mdi, uint8_t * event_data, uint32_t inp
 
                     /* Copy copyright info in the getinfo struct */
                     if (mdi->extra_info.copyright) {
-                        mdi->extra_info.copyright = (char *) realloc(mdi->extra_info.copyright,(strlen(mdi->extra_info.copyright) + 1 + tmp_length + 1));
+                        char * new_copyright =  (char *) realloc(mdi->extra_info.copyright,(strlen(mdi->extra_info.copyright) + 1 + tmp_length + 1));
+                        if (!new_copyright){
+                            _WM_GLOBAL_ERROR(__FUNCTION__, __LINE__, WM_ERR_MEM, "Unable to reallocate memory.", 0);
+                            free(mdi->extra_info.copyright);
+                            return(0);
+                        }
+                        mdi->extra_info.copyright = new_copyright;
                         memcpy(&mdi->extra_info.copyright[strlen(mdi->extra_info.copyright) + 1], event_data, tmp_length);
                         mdi->extra_info.copyright[strlen(mdi->extra_info.copyright) + 1 + tmp_length] = '\0';
                         mdi->extra_info.copyright[strlen(mdi->extra_info.copyright)] = '\n';
